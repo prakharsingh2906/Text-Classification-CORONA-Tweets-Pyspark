@@ -1,0 +1,647 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from pyspark.sql import SparkSession"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "spark = SparkSession.builder.appName('corona').getOrCreate()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df=spark.read.csv('NLP_Corona_train.csv', header = True, inferSchema=True,sep= ',')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+--------------------+--------------------+--------------------+--------------------+------------------+--------------------+\n",
+      "|            UserName|          ScreenName|            Location|             TweetAt|         Sentiment|       OriginalTweet|\n",
+      "+--------------------+--------------------+--------------------+--------------------+------------------+--------------------+\n",
+      "|                3799|               48751|              London|          16-03-2020|           Neutral|@MeNyrbie @Phil_G...|\n",
+      "|                3800|               48752|                  UK|          16-03-2020|          Positive|advice Talk to yo...|\n",
+      "|                3801|               48753|           Vagabonds|          16-03-2020|          Positive|Coronavirus Austr...|\n",
+      "|                3802|               48754|                null|          16-03-2020|          Positive|My food stock is ...|\n",
+      "|              PLEASE|         don't panic| THERE WILL BE EN...|                null|              null|                null|\n",
+      "|           Stay calm|          stay safe.|                null|                null|              null|                null|\n",
+      "|#COVID19france #C...|                null|                null|                null|              null|                null|\n",
+      "|                3803|               48755|                null|          16-03-2020|Extremely Negative|Me, ready to go a...|\n",
+      "|Not because I'm p...| but because my f...|          but please| don't panic. It ...|              null|                null|\n",
+      "|#CoronavirusFranc...|                null|                null|                null|              null|                null|\n",
+      "|                3804|               48756|ÜT: 36.319708,-82...|          16-03-2020|          Positive|As news of the re...|\n",
+      "|                3805|               48757|35.926541,-78.753267|          16-03-2020|          Positive|\"Cashier at groce...|\n",
+      "|                3806|               48758|             Austria|          16-03-2020|           Neutral|Was at the superm...|\n",
+      "|#toiletpapercrisi...|                null|                null|                null|              null|                null|\n",
+      "|                3807|               48759|     Atlanta, GA USA|          16-03-2020|          Positive|Due to COVID-19 o...|\n",
+      "|                3808|               48760|    BHAVNAGAR,GUJRAT|          16-03-2020|          Negative|For corona preven...|\n",
+      "|                3809|               48761|      Makati, Manila|          16-03-2020|           Neutral|All month there h...|\n",
+      "|                3810|               48762|Pitt Meadows, BC,...|          16-03-2020|Extremely Positive|Due to the Covid-...|\n",
+      "|The wait time may...| particularly bee...|                null|                null|              null|                null|\n",
+      "|We thank you for ...|                null|                null|                null|              null|                null|\n",
+      "+--------------------+--------------------+--------------------+--------------------+------------------+--------------------+\n",
+      "only showing top 20 rows\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "df.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "65074 , 6\n"
+     ]
+    }
+   ],
+   "source": [
+    "df = df.dropDuplicates()\n",
+    "print(df.count(),\",\",len(df.columns))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "32621 , 6\n"
+     ]
+    }
+   ],
+   "source": [
+    "df = df.na.drop()\n",
+    "print(df.count(),\",\",len(df.columns))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "root\n",
+      " |-- UserName: string (nullable = true)\n",
+      " |-- ScreenName: string (nullable = true)\n",
+      " |-- Location: string (nullable = true)\n",
+      " |-- TweetAt: string (nullable = true)\n",
+      " |-- Sentiment: string (nullable = true)\n",
+      " |-- OriginalTweet: string (nullable = true)\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "df.printSchema()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['UserName', 'ScreenName', 'Location', 'TweetAt', 'Sentiment', 'OriginalTweet']"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.columns"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sentiments1 = ['Positive','Negative','Neutral','Extremely Positive','Extremely Negative']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df = df.filter(df.Sentiment.isin(sentiments1))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "5"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.select('Sentiment').distinct().count()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+------------------+\n",
+      "|         Sentiment|\n",
+      "+------------------+\n",
+      "|Extremely Negative|\n",
+      "|           Neutral|\n",
+      "|          Positive|\n",
+      "|          Negative|\n",
+      "|Extremely Positive|\n",
+      "+------------------+\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "df.select('Sentiment').distinct().show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Preparation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from pyspark.sql.functions import length"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df=df.withColumn('length', length(df['OriginalTweet']))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+--------+----------+--------------------+----------+------------------+--------------------+------+\n",
+      "|UserName|ScreenName|            Location|   TweetAt|         Sentiment|       OriginalTweet|length|\n",
+      "+--------+----------+--------------------+----------+------------------+--------------------+------+\n",
+      "|    3863|     48815|              Boston|16-03-2020|           Neutral|What 2K Consumers...|   110|\n",
+      "|    4088|     49040|     California, USA|16-03-2020|          Positive|Apple has closed ...|   136|\n",
+      "|    4321|     49273|       Lake Mary, FL|16-03-2020|           Neutral|M-C: Political Tr...|   111|\n",
+      "|    4411|     49363| South Carolina, USA|16-03-2020|          Negative|Coronavirus Live ...|    67|\n",
+      "|    4459|     49411|      United Kingdom|17-03-2020|          Negative|Queues to buy gun...|   186|\n",
+      "|    4789|     49741|That's me in the ...|17-03-2020|          Positive|Boris Johnson the...|   212|\n",
+      "|    5004|     49956|        Upstate, NY |17-03-2020|           Neutral|This country need...|   197|\n",
+      "|    5424|     50376|             Britain|17-03-2020|Extremely Negative|The world; panic ...|    43|\n",
+      "|    5753|     50705|Tauranga New Zealand|17-03-2020|          Positive|How To Encourage ...|   156|\n",
+      "|    5781|     50733|    Global Citizen ?|17-03-2020|          Negative|I need to go buy ...|   236|\n",
+      "|    5817|     50769|      Scottsdale, AZ|17-03-2020|          Negative|? Coronavirus: Su...|   128|\n",
+      "|    5960|     50912|           Singapore|17-03-2020|          Positive|Dear Singaporeans...|   152|\n",
+      "|    6077|     51029|   Karachi, Pakistan|17-03-2020|           Neutral|As major #economi...|   120|\n",
+      "|    6419|     51371|           New Delhi|17-03-2020|Extremely Negative|Non-Veg food is a...|   268|\n",
+      "|    6474|     51426|  Based @1871Chicago|18-03-2020|Extremely Positive|Here are the best...|   181|\n",
+      "|    6748|     51700|  Silicon Slopes, UT|18-03-2020|           Neutral|After the Virus: ...|    66|\n",
+      "|    7266|     52218|           Stevenage|18-03-2020|           Neutral|So Ive listened ...|   153|\n",
+      "|    7389|     52341|     London, England|18-03-2020|Extremely Positive|@Superdry is in n...|   130|\n",
+      "|    7750|     52702|     Milwaukee, Wis.|18-03-2020|           Neutral|Grocery store sal...|    74|\n",
+      "|    8161|     53113|Las Vegas, NV (Su...|18-03-2020|Extremely Negative|Governor Sisolak ...|   217|\n",
+      "+--------+----------+--------------------+----------+------------------+--------------------+------+\n",
+      "only showing top 20 rows\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "df.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df=df.withColumnRenamed(\"Sentiment\",\"sentiment1\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+------------------+------------------+\n",
+      "|        Sentiment1|       avg(length)|\n",
+      "+------------------+------------------+\n",
+      "|Extremely Negative|179.08476571697668|\n",
+      "|           Neutral|134.06076810889644|\n",
+      "|          Positive| 167.5731693929081|\n",
+      "|          Negative|165.74478227261014|\n",
+      "|Extremely Positive|183.49146433990896|\n",
+      "+------------------+------------------+\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "df.groupby('Sentiment1').mean().show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from pyspark.ml.feature import Tokenizer, StopWordsRemover, CountVectorizer, IDF, StringIndexer\n",
+    "\n",
+    "tokenizer=Tokenizer(inputCol=\"OriginalTweet\", outputCol=\"token_text\")\n",
+    "stopremove=StopWordsRemover(inputCol=\"token_text\", outputCol=\"stop_tokens\")\n",
+    "count_vec=CountVectorizer(inputCol=\"stop_tokens\", outputCol=\"c_vec\")\n",
+    "idf=IDF(inputCol=\"c_vec\", outputCol=\"tf_idf\")\n",
+    "\n",
+    "# we also need to convert our labels in numbers\n",
+    "ham_samp_to_num = StringIndexer(inputCol=\"sentiment1\", outputCol='label')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from pyspark.ml.feature import VectorAssembler\n",
+    "from pyspark.ml.linalg import Vector"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "clean_up1 = VectorAssembler(inputCols=['tf_idf','length'], outputCol='features')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from pyspark.ml.classification import NaiveBayes, RandomForestClassifier, DecisionTreeClassifier\n",
+    "\n",
+    "nb=NaiveBayes()\n",
+    "rf=RandomForestClassifier(numTrees=200)\n",
+    "dtc=DecisionTreeClassifier(maxDepth=15)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Pipeline"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from pyspark.ml import Pipeline\n",
+    "df_prep_pipeline= Pipeline(stages=[ham_samp_to_num, tokenizer, stopremove,count_vec, idf,clean_up1])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cleaner1=df_prep_pipeline.fit(df)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "clean_df=cleaner1.transform(df)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+--------+----------+--------------------+----------+------------------+--------------------+------+-----+--------------------+--------------------+--------------------+--------------------+--------------------+\n",
+      "|UserName|ScreenName|            Location|   TweetAt|        sentiment1|       OriginalTweet|length|label|          token_text|         stop_tokens|               c_vec|              tf_idf|            features|\n",
+      "+--------+----------+--------------------+----------+------------------+--------------------+------+-----+--------------------+--------------------+--------------------+--------------------+--------------------+\n",
+      "|    3863|     48815|              Boston|16-03-2020|           Neutral|What 2K Consumers...|   110|  2.0|[what, 2k, consum...|[2k, consumers, t...|(80619,[6,48,135,...|(80619,[6,48,135,...|(80620,[6,48,135,...|\n",
+      "|    4088|     49040|     California, USA|16-03-2020|          Positive|Apple has closed ...|   136|  0.0|[apple, has, clos...|[apple, closed, r...|(80619,[7,59,165,...|(80619,[7,59,165,...|(80620,[7,59,165,...|\n",
+      "|    4321|     49273|       Lake Mary, FL|16-03-2020|           Neutral|M-C: Political Tr...|   111|  2.0|[m-c:, political,...|[m-c:, political,...|(80619,[6,9,774,8...|(80619,[6,9,774,8...|(80620,[6,9,774,8...|\n",
+      "|    4411|     49363| South Carolina, USA|16-03-2020|          Negative|Coronavirus Live ...|    67|  1.0|[coronavirus, liv...|[coronavirus, liv...|(80619,[6,32,73,2...|(80619,[6,32,73,2...|(80620,[6,32,73,2...|\n",
+      "|    4459|     49411|      United Kingdom|17-03-2020|          Negative|Queues to buy gun...|   186|  1.0|[queues, to, buy,...|[queues, buy, gun...|(80619,[1,4,8,17,...|(80619,[1,4,8,17,...|(80620,[1,4,8,17,...|\n",
+      "|    4789|     49741|That's me in the ...|17-03-2020|          Positive|Boris Johnson the...|   212|  0.0|[boris, johnson, ...|[boris, johnson, ...|(80619,[8,18,56,1...|(80619,[8,18,56,1...|(80620,[8,18,56,1...|\n",
+      "|    5004|     49956|        Upstate, NY |17-03-2020|           Neutral|This country need...|   197|  2.0|[this, country, n...|[country, needs, ...|(80619,[0,3,7,12,...|(80619,[0,3,7,12,...|(80620,[0,3,7,12,...|\n",
+      "|    5424|     50376|             Britain|17-03-2020|Extremely Negative|The world; panic ...|    43|  4.0|[the, world;, pan...|[world;, panic, b...|(80619,[4,23,2743...|(80619,[4,23,2743...|(80620,[4,23,2743...|\n",
+      "|    5753|     50705|Tauranga New Zealand|17-03-2020|          Positive|How To Encourage ...|   156|  0.0|[how, to, encoura...|[encourage, &amp;...|(80619,[0,11,13,3...|(80619,[0,11,13,3...|(80620,[0,11,13,3...|\n",
+      "|    5781|     50733|    Global Citizen ?|17-03-2020|          Negative|I need to go buy ...|   236|  1.0|[i, need, to, go,...|[need, go, buy, c...|(80619,[17,18,20,...|(80619,[17,18,20,...|(80620,[17,18,20,...|\n",
+      "|    5817|     50769|      Scottsdale, AZ|17-03-2020|          Negative|? Coronavirus: Su...|   128|  1.0|[?, coronavirus:,...|[?, coronavirus:,...|(80619,[1,33,60,6...|(80619,[1,33,60,6...|(80620,[1,33,60,6...|\n",
+      "|    5960|     50912|           Singapore|17-03-2020|          Positive|Dear Singaporeans...|   152|  0.0|[dear, singaporea...|[dear, singaporea...|(80619,[21,43,53,...|(80619,[21,43,53,...|(80620,[21,43,53,...|\n",
+      "|    6077|     51029|   Karachi, Pakistan|17-03-2020|           Neutral|As major #economi...|   120|  2.0|[as, major, #econ...|[major, #economie...|(80619,[21,297,34...|(80619,[21,297,34...|(80620,[21,297,34...|\n",
+      "|    6419|     51371|           New Delhi|17-03-2020|Extremely Negative|Non-Veg food is a...|   268|  4.0|[non-veg, food, i...|[non-veg, food, a...|(80619,[1,2,4,27,...|(80619,[1,2,4,27,...|(80620,[1,2,4,27,...|\n",
+      "|    6474|     51426|  Based @1871Chicago|18-03-2020|Extremely Positive|Here are the best...|   181|  3.0|[here, are, the, ...|[best, foods, sto...|(80619,[0,28,32,3...|(80619,[0,28,32,3...|(80620,[0,28,32,3...|\n",
+      "|    6748|     51700|  Silicon Slopes, UT|18-03-2020|           Neutral|After the Virus: ...|    66|  2.0|[after, the, viru...|[virus:, 10, cons...|(80619,[9,108,270...|(80619,[9,108,270...|(80620,[9,108,270...|\n",
+      "|    7266|     52218|           Stevenage|18-03-2020|           Neutral|So Ive listened ...|   153|  2.0|[so, ive, listen...|[ive, listened, ...|(80619,[36,95,97,...|(80619,[36,95,97,...|(80620,[36,95,97,...|\n",
+      "|    7389|     52341|     London, England|18-03-2020|Extremely Positive|@Superdry is in n...|   130|  3.0|[@superdry, is, i...|[@superdry, negot...|(80619,[6,7,32,67...|(80619,[6,7,32,67...|(80620,[6,7,32,67...|\n",
+      "|    7750|     52702|     Milwaukee, Wis.|18-03-2020|           Neutral|Grocery store sal...|    74|  2.0|[grocery, store, ...|[grocery, store, ...|(80619,[3,6,7,228...|(80619,[3,6,7,228...|(80620,[3,6,7,228...|\n",
+      "|    8161|     53113|Las Vegas, NV (Su...|18-03-2020|Extremely Negative|Governor Sisolak ...|   217|  4.0|[governor, sisola...|[governor, sisola...|(80619,[3,4,7,61,...|(80619,[3,4,7,61,...|(80620,[3,4,7,61,...|\n",
+      "+--------+----------+--------------------+----------+------------------+--------------------+------+-----+--------------------+--------------------+--------------------+--------------------+--------------------+\n",
+      "only showing top 20 rows\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "clean_df.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "clean_df=clean_df.select(['label', 'features'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+-----+--------------------+\n",
+      "|label|            features|\n",
+      "+-----+--------------------+\n",
+      "|  2.0|(80620,[6,48,135,...|\n",
+      "|  0.0|(80620,[7,59,165,...|\n",
+      "|  2.0|(80620,[6,9,774,8...|\n",
+      "|  1.0|(80620,[6,32,73,2...|\n",
+      "|  1.0|(80620,[1,4,8,17,...|\n",
+      "|  0.0|(80620,[8,18,56,1...|\n",
+      "|  2.0|(80620,[0,3,7,12,...|\n",
+      "|  4.0|(80620,[4,23,2743...|\n",
+      "|  0.0|(80620,[0,11,13,3...|\n",
+      "|  1.0|(80620,[17,18,20,...|\n",
+      "|  1.0|(80620,[1,33,60,6...|\n",
+      "|  0.0|(80620,[21,43,53,...|\n",
+      "|  2.0|(80620,[21,297,34...|\n",
+      "|  4.0|(80620,[1,2,4,27,...|\n",
+      "|  3.0|(80620,[0,28,32,3...|\n",
+      "|  2.0|(80620,[9,108,270...|\n",
+      "|  2.0|(80620,[36,95,97,...|\n",
+      "|  3.0|(80620,[6,7,32,67...|\n",
+      "|  2.0|(80620,[3,6,7,228...|\n",
+      "|  4.0|(80620,[3,4,7,61,...|\n",
+      "+-----+--------------------+\n",
+      "only showing top 20 rows\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "clean_df.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Training"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "(training, testing)=clean_df.randomSplit([0.75,0.25])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "spam_predictor1=dtc.fit(training)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "test_results1=spam_predictor1.transform(testing)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+-----+--------------------+--------------------+--------------------+----------+\n",
+      "|label|            features|       rawPrediction|         probability|prediction|\n",
+      "+-----+--------------------+--------------------+--------------------+----------+\n",
+      "|  0.0|(80620,[0,2,11,25...|[2355.0,2300.0,13...|[0.28740541859897...|       0.0|\n",
+      "|  0.0|(80620,[5,18,55,1...|[151.0,31.0,5.0,4...|[0.61632653061224...|       0.0|\n",
+      "|  0.0|(80620,[5,92,477,...|[2239.0,1875.0,27...|[0.26046998604001...|       2.0|\n",
+      "|  0.0|(80620,[7,59,165,...|[2239.0,1875.0,27...|[0.26046998604001...|       2.0|\n",
+      "|  0.0|(80620,[8,18,56,1...|[229.0,103.0,21.0...|[0.43207547169811...|       0.0|\n",
+      "|  0.0|(80620,[9,12,17,5...|[2355.0,2300.0,13...|[0.28740541859897...|       0.0|\n",
+      "|  0.0|(80620,[16,63,124...|[2239.0,1875.0,27...|[0.26046998604001...|       2.0|\n",
+      "|  0.0|(80620,[24,37,54,...|[0.0,0.0,0.0,7.0,...|[0.0,0.0,0.0,1.0,...|       3.0|\n",
+      "|  0.0|(80620,[33,2064,2...|[2239.0,1875.0,27...|[0.26046998604001...|       2.0|\n",
+      "|  0.0|(80620,[91,98,141...|[57.0,23.0,5.0,48...|[0.41007194244604...|       0.0|\n",
+      "|  1.0|(80620,[0,2,12,85...|[60.0,67.0,162.0,...|[0.18691588785046...|       2.0|\n",
+      "|  1.0|(80620,[0,149,407...|[2239.0,1875.0,27...|[0.26046998604001...|       2.0|\n",
+      "|  1.0|(80620,[1,2,22,28...|[2355.0,2300.0,13...|[0.28740541859897...|       0.0|\n",
+      "|  1.0|(80620,[1,5,10,15...|[2239.0,1875.0,27...|[0.26046998604001...|       2.0|\n",
+      "|  1.0|(80620,[1,33,60,6...|[2239.0,1875.0,27...|[0.26046998604001...|       2.0|\n",
+      "|  1.0|(80620,[2,4,30,61...|[157.0,269.0,173....|[0.22269503546099...|       1.0|\n",
+      "|  1.0|(80620,[2,8,10,11...|[2355.0,2300.0,13...|[0.28740541859897...|       0.0|\n",
+      "|  1.0|(80620,[5,20,51,7...|[2355.0,2300.0,13...|[0.28740541859897...|       0.0|\n",
+      "|  2.0|(80620,[0,2,32,41...|[157.0,269.0,173....|[0.22269503546099...|       1.0|\n",
+      "|  2.0|(80620,[0,3,7,12,...|[2355.0,2300.0,13...|[0.28740541859897...|       0.0|\n",
+      "+-----+--------------------+--------------------+--------------------+----------+\n",
+      "only showing top 20 rows\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "test_results1.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from pyspark.ml.evaluation import MulticlassClassificationEvaluator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "acc_eval=MulticlassClassificationEvaluator()\n",
+    "acc=acc_eval.evaluate(test_results1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Accuracy of the model is:: 0.3381217557842695\n"
+     ]
+    }
+   ],
+   "source": [
+    "print (\"Accuracy of the model is::\", acc)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
